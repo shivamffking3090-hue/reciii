@@ -1,0 +1,132 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and dietary preferences info",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "preferences": {
+          "type": "object",
+          "properties": {
+            "cuisine": { "type": "string" },
+            "language": { "type": "string" },
+            "diet": { "type": "string" }
+          }
+        }
+      },
+      "required": ["userId", "name", "email", "createdAt"]
+    },
+    "Recipe": {
+      "title": "Recipe",
+      "description": "AI Generated or custom culinary recipes",
+      "type": "object",
+      "properties": {
+        "recipeId": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "ingredients": { "type": "array" },
+        "instructions": { "type": "array" },
+        "nutrition": { "type": "object" },
+        "cuisine": { "type": "string" },
+        "imagePrompt": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["recipeId", "userId", "title", "ingredients", "instructions", "createdAt"]
+    },
+    "SavedRecipe": {
+      "title": "SavedRecipe",
+      "description": "Recipes saved by users to their favorites list",
+      "type": "object",
+      "properties": {
+        "saveId": { "type": "string" },
+        "userId": { "type": "string" },
+        "recipeId": { "type": "string" },
+        "savedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["saveId", "userId", "recipeId", "savedAt"]
+    },
+    "MealPlan": {
+      "title": "MealPlan",
+      "description": "Daily, weekly or monthly nutritional schedules",
+      "type": "object",
+      "properties": {
+        "planId": { "type": "string" },
+        "userId": { "type": "string" },
+        "meals": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["planId", "userId", "meals", "createdAt"]
+    },
+    "ShoppingList": {
+      "title": "ShoppingList",
+      "description": "Aggregated grocery items generated from plans/recipes",
+      "type": "object",
+      "properties": {
+        "listId": { "type": "string" },
+        "userId": { "type": "string" },
+        "items": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["listId", "userId", "items", "createdAt"]
+    },
+    "ChatHistory": {
+      "title": "ChatHistory",
+      "description": "Logged chef chat conversations",
+      "type": "object",
+      "properties": {
+        "chatId": { "type": "string" },
+        "userId": { "type": "string" },
+        "message": { "type": "string" },
+        "response": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["chatId", "userId", "message", "response", "timestamp"]
+    },
+    "Note": {
+      "title": "Note",
+      "description": "Personal annotations attached to recipes",
+      "type": "object",
+      "properties": {
+        "noteId": { "type": "string" },
+        "recipeId": { "type": "string" },
+        "userId": { "type": "string" },
+        "content": { "type": "string" }
+      },
+      "required": ["noteId", "recipeId", "userId", "content"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Main user collection"
+    },
+    "/recipes/{recipeId}": {
+      "schema": "Recipe",
+      "description": "Recipes storage"
+    },
+    "/savedRecipes/{saveId}": {
+      "schema": "SavedRecipe",
+      "description": "User saved recipes"
+    },
+    "/mealPlans/{planId}": {
+      "schema": "MealPlan",
+      "description": "User meal plans"
+    },
+    "/shoppingLists/{listId}": {
+      "schema": "ShoppingList",
+      "description": "User shopping lists"
+    },
+    "/chatHistory/{chatId}": {
+      "schema": "ChatHistory",
+      "description": "Conversations log with the AI Chef"
+    },
+    "/notes/{noteId}": {
+      "schema": "Note",
+      "description": "Recipe specific personal notes"
+    }
+  }
+}

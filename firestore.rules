@@ -1,0 +1,172 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Catch-All Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Reusable Global Helper Primitives ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Validation Blueprints ---
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['userId', 'name', 'email', 'createdAt'])
+        && data.keys().size() >= 4
+        && data.userId is string
+        && data.userId.size() <= 128
+        && data.name is string
+        && data.name.size() <= 128
+        && data.email is string
+        && data.email.size() <= 128;
+    }
+
+    function isValidRecipe(data) {
+      return data.keys().hasAll(['recipeId', 'userId', 'title', 'ingredients', 'instructions', 'createdAt'])
+        && data.recipeId is string
+        && data.recipeId.size() <= 128
+        && data.userId is string
+        && data.userId.size() <= 128
+        && data.title is string
+        && data.title.size() <= 200
+        && data.ingredients is list
+        && data.instructions is list;
+    }
+
+    function isValidSavedRecipe(data) {
+      return data.keys().hasAll(['saveId', 'userId', 'recipeId', 'savedAt'])
+        && data.keys().size() == 4
+        && data.saveId is string
+        && data.saveId.size() <= 128
+        && data.userId is string
+        && data.userId.size() <= 128
+        && data.recipeId is string
+        && data.recipeId.size() <= 128;
+    }
+
+    function isValidMealPlan(data) {
+      return data.keys().hasAll(['planId', 'userId', 'meals', 'createdAt'])
+        && data.planId is string
+        && data.planId.size() <= 128
+        && data.userId is string
+        && data.userId.size() <= 128
+        && data.meals is map;
+    }
+
+    function isValidShoppingList(data) {
+      return data.keys().hasAll(['listId', 'userId', 'items', 'createdAt'])
+        && data.listId is string
+        && data.listId.size() <= 128
+        && data.userId is string
+        && data.userId.size() <= 128
+        && data.items is list;
+    }
+
+    function isValidChatHistory(data) {
+      return data.keys().hasAll(['chatId', 'userId', 'message', 'response', 'timestamp'])
+        && data.chatId is string
+        && data.chatId.size() <= 128
+        && data.userId is string
+        && data.userId.size() <= 128
+        && data.message is string
+        && data.message.size() <= 5000
+        && data.response is string
+        && data.response.size() <= 20000;
+    }
+
+    function isValidNote(data) {
+      return data.keys().hasAll(['noteId', 'recipeId', 'userId', 'content'])
+        && data.keys().size() == 4
+        && data.noteId is string
+        && data.noteId.size() <= 128
+        && data.recipeId is string
+        && data.recipeId.size() <= 128
+        && data.userId is string
+        && data.userId.size() <= 128
+        && data.content is string
+        && data.content.size() <= 5000;
+    }
+
+
+    // --- Collection Enforcements ---
+
+    // USERS COLLECTION
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.userId == resource.data.userId && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false; // Users cannot delete profiles directly via Client SDK
+    }
+
+    // RECIPES COLLECTION
+    match /recipes/{recipeId} {
+      // Recipes can be read by anyone signed in (sharing enabled!) or owners
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId) && isValidRecipe(request.resource.data) && request.resource.data.createdAt == request.time;
+      allow update: if isSignedIn() && isOwner(resource.data.userId) && isValidRecipe(request.resource.data) && request.resource.data.userId == resource.data.userId && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+
+    // SAVED RECIPES
+    match /savedRecipes/{saveId} {
+      allow get: if isSignedIn() && isOwner(resource.data.userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId) && isValidSavedRecipe(request.resource.data) && request.resource.data.savedAt == request.time;
+      allow delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+
+    // MEAL PLANS
+    match /mealPlans/{planId} {
+      allow get: if isSignedIn() && isOwner(resource.data.userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId) && isValidMealPlan(request.resource.data) && request.resource.data.createdAt == request.time;
+      allow update: if isSignedIn() && isOwner(resource.data.userId) && isValidMealPlan(request.resource.data) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+
+    // SHOPPING LISTS
+    match /shoppingLists/{listId} {
+      allow get: if isSignedIn() && isOwner(resource.data.userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId) && isValidShoppingList(request.resource.data) && request.resource.data.createdAt == request.time;
+      allow update: if isSignedIn() && isOwner(resource.data.userId) && isValidShoppingList(request.resource.data) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+
+    // CHAT HISTORY
+    match /chatHistory/{chatId} {
+      allow get: if isSignedIn() && isOwner(resource.data.userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId) && isValidChatHistory(request.resource.data) && request.resource.data.timestamp == request.time;
+      allow update: if false; // AI chats are immutable log events
+      allow delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+
+    // RECIPE NOTES
+    match /notes/{noteId} {
+      allow get: if isSignedIn() && isOwner(resource.data.userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && (isOwner(request.resource.data.userId) || exists(/databases/$(database)/documents/admins/$(request.auth.uid))) && isValidNote(request.resource.data);
+      allow update: if isSignedIn() && isOwner(resource.data.userId) && isValidNote(request.resource.data) && request.resource.data.noteId == resource.data.noteId && request.resource.data.recipeId == resource.data.recipeId;
+      allow delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+
+    // ADMIN PRIVILEGE REFERENCE
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Admins are only set directly in console
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "AI Recipe Generator",
+  "description": "An intelligent cooking companion that uses state-of-the-art AI to generate customized recipes, plan weekly meals, analyze nutrition, minimize food waste, and chat with an expert chef.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
